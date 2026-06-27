@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -21,10 +22,16 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Android Platforms
+    - name: Install Android SDK Packages
       run: |
         yes | sdkmanager --licenses > /dev/null 2>&1
-        sdkmanager "platforms;android-36" "build-tools;35.0.0"
+        sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
+        sdkmanager "platforms;android-36-ext1" 2>/dev/null || echo "ext1 not available, continuing..."
+
+    - name: Patch compileSdk syntax
+      run: |
+        sed -i 's/compileSdk { version = release(36) { minorApiLevel = 1 } }/compileSdk = 36/' app/build.gradle.kts
+        grep "compileSdk" app/build.gradle.kts
 
     - name: Create .env file
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
@@ -43,7 +50,7 @@ jobs:
         gradle-version: '8.12'
 
     - name: Build Debug APK
-      run: gradle assembleDebug
+      run: gradle assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
