@@ -1,0 +1,6 @@
+{
+  "name": "LPG Manager",
+  "description": "A clean and simple offline-first app for personal use to track and store customer LPG booking and delivery data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
