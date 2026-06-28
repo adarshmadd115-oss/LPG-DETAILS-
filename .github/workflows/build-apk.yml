@@ -30,7 +30,7 @@ jobs:
     - name: Patch build.gradle.kts
       run: |
         python3 << 'EOF'
-        # Fix 1: compileSdk syntax fix
+        # Fix 1: compileSdk
         content = open('app/build.gradle.kts').read()
         content = content.replace(
           'compileSdk { version = release(36) { minorApiLevel = 1 } }',
@@ -38,18 +38,19 @@ jobs:
         )
         open('app/build.gradle.kts', 'w').write(content)
 
-        # Fix 2: KSP2 disable - gradle.properties mein jaata hai
+        # Fix 2: headless flag Gradle JVM mein
         props = open('gradle.properties').read()
-        if 'ksp.useKSP2' not in props:
-            props += '\nksp.useKSP2=false\n'
-            open('gradle.properties', 'w').write(props)
-        
+        props = '\n'.join([l for l in props.splitlines()
+                           if 'useKSP2' not in l and 'useKsp2' not in l])
+        props = props.replace(
+          'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8',
+          'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8 -Djava.awt.headless=true'
+        )
+        open('gradle.properties', 'w').write(props)
         print("Done!")
         EOF
-        echo "=== Checking compileSdk ==="
+        grep "jvmargs" gradle.properties
         grep "compileSdk" app/build.gradle.kts
-        echo "=== Checking gradle.properties ==="
-        grep "ksp" gradle.properties
 
     - name: Create .env file
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
