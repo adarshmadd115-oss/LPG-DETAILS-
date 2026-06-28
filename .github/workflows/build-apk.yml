@@ -30,21 +30,26 @@ jobs:
     - name: Patch build.gradle.kts
       run: |
         python3 << 'EOF'
+        # Fix 1: compileSdk syntax fix
         content = open('app/build.gradle.kts').read()
         content = content.replace(
           'compileSdk { version = release(36) { minorApiLevel = 1 } }',
           'compileSdk = 36'
         )
-        if 'useKSP2' not in content:
-          content = content.replace(
-            'android {',
-            'ksp {\n  useKSP2 = false\n}\n\nandroid {',
-            1
-          )
         open('app/build.gradle.kts', 'w').write(content)
-        print("Patches applied!")
+
+        # Fix 2: KSP2 disable - gradle.properties mein jaata hai
+        props = open('gradle.properties').read()
+        if 'ksp.useKSP2' not in props:
+            props += '\nksp.useKSP2=false\n'
+            open('gradle.properties', 'w').write(props)
+        
+        print("Done!")
         EOF
-        grep -n "compileSdk\|useKSP2\|^ksp" app/build.gradle.kts
+        echo "=== Checking compileSdk ==="
+        grep "compileSdk" app/build.gradle.kts
+        echo "=== Checking gradle.properties ==="
+        grep "ksp" gradle.properties
 
     - name: Create .env file
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
