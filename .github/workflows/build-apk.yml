@@ -50,7 +50,7 @@ jobs:
         gradle-version: '9.3.1'
 
     - name: Build Debug APK
-      run: gradle assembleDebug --stacktrace
+      run: gradle assembleDebug --no-daemon --stacktrace
       env:
         JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
 
