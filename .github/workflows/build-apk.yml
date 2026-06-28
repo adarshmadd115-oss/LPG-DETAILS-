@@ -26,12 +26,25 @@ jobs:
       run: |
         yes | sdkmanager --licenses > /dev/null 2>&1
         sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
-        sdkmanager "platforms;android-36-ext1" 2>/dev/null || echo "ext1 not available, continuing..."
 
-    - name: Patch compileSdk syntax
+    - name: Patch build.gradle.kts
       run: |
-        sed -i 's/compileSdk { version = release(36) { minorApiLevel = 1 } }/compileSdk = 36/' app/build.gradle.kts
-        grep "compileSdk" app/build.gradle.kts
+        python3 << 'EOF'
+        content = open('app/build.gradle.kts').read()
+        content = content.replace(
+          'compileSdk { version = release(36) { minorApiLevel = 1 } }',
+          'compileSdk = 36'
+        )
+        if 'useKSP2' not in content:
+          content = content.replace(
+            'android {',
+            'ksp {\n  useKSP2 = false\n}\n\nandroid {',
+            1
+          )
+        open('app/build.gradle.kts', 'w').write(content)
+        print("Patches applied!")
+        EOF
+        grep -n "compileSdk\|useKSP2\|^ksp" app/build.gradle.kts
 
     - name: Create .env file
       run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
@@ -44,13 +57,16 @@ jobs:
           -validity 10000 \
           -dname "CN=Android Debug,O=Android,C=US"
 
+    - name: Install virtual display
+      run: sudo apt-get install -y xvfb
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '9.3.1'
 
     - name: Build Debug APK
-      run: gradle assembleDebug --no-daemon --stacktrace
+      run: xvfb-run --auto-servernum gradle assembleDebug --no-daemon --stacktrace
       env:
         JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
 
