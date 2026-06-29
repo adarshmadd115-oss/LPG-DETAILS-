@@ -1,0 +1,34 @@
+workflows:
+  android-debug:
+    name: LPG Manager Debug APK
+    instance_type: mac_mini_m2
+    environment:
+      java: 17
+    scripts:
+      - name: Install Android SDK
+        script: |
+          sdkmanager "platforms;android-36" "build-tools;35.0.0" 2>/dev/null || true
+
+      - name: Fix compileSdk syntax
+        script: |
+          sed -i '' \
+            's/compileSdk { version = release(36) { minorApiLevel = 1 } }/compileSdk = 36/' \
+            app/build.gradle.kts
+          grep "compileSdk" app/build.gradle.kts
+
+      - name: Create debug keystore
+        script: |
+          keytool -genkey -v -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Build Debug APK
+        script: |
+          gradle assembleDebug
+
+    artifacts:
+      - app/build/outputs/**/*.apk
