@@ -3,79 +3,65 @@ name: Build LPG Manager APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:   # Manual trigger button bhi milega
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+
+    # Step 1: Code checkout
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    # Step 2: Java 17 setup
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
+    # Step 3: Android SDK setup
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Android SDK Packages
+    # Step 4: Required SDK platforms install
+    - name: Install Android Platforms
       run: |
         yes | sdkmanager --licenses > /dev/null 2>&1
         sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
 
-    - name: Patch build.gradle.kts
-      run: |
-        python3 << 'EOF'
-        # Fix 1: compileSdk
-        content = open('app/build.gradle.kts').read()
-        content = content.replace(
-          'compileSdk { version = release(36) { minorApiLevel = 1 } }',
-          'compileSdk = 36'
-        )
-        open('app/build.gradle.kts', 'w').write(content)
-
-        # Fix 2: headless flag Gradle JVM mein
-        props = open('gradle.properties').read()
-        props = '\n'.join([l for l in props.splitlines()
-                           if 'useKSP2' not in l and 'useKsp2' not in l])
-        props = props.replace(
-          'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8',
-          'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8 -Djava.awt.headless=true'
-        )
-        open('gradle.properties', 'w').write(props)
-        print("Done!")
-        EOF
-        grep "jvmargs" gradle.properties
-        grep "compileSdk" app/build.gradle.kts
-
+    # Step 5: Gemini API Key .env file banana
     - name: Create .env file
-      run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+      run: |
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
 
+    # Step 6: Debug keystore banana (signing ke liye)
     - name: Create Debug Keystore
       run: |
         keytool -genkey -v -keystore debug.keystore \
-          -storepass android -alias androiddebugkey \
-          -keypass android -keyalg RSA -keysize 2048 \
+          -storepass android \
+          -alias androiddebugkey \
+          -keypass android \
+          -keyalg RSA \
+          -keysize 2048 \
           -validity 10000 \
           -dname "CN=Android Debug,O=Android,C=US"
 
-    - name: Install virtual display
-      run: sudo apt-get install -y xvfb
-
+    # Step 7: Gradle setup (gradlew nahi hai project mein, isliye direct install)
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
       with:
-        gradle-version: '9.3.1'
+        gradle-version: '8.12'
 
+    # Step 8: APK build
     - name: Build Debug APK
-      run: xvfb-run --auto-servernum gradle assembleDebug --no-daemon --stacktrace
+      run: gradle assembleDebug
       env:
-        JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
+        ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
+    # Step 9: APK upload as artifact (download kar sakte ho)
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
