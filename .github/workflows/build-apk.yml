@@ -33,9 +33,9 @@ jobs:
         sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
 
     # Step 5: Gemini API Key .env file banana
-    - name: Create .env file
+    - name: Create local.properties with dummy key
       run: |
-        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+        echo "GEMINI_API_KEY=dummy_key_not_used" >> local.properties
 
     # Step 6: Debug keystore banana (signing ke liye)
     - name: Create Debug Keystore
